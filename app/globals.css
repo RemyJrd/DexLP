@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-background text-white font-sans min-h-screen;
+}
+
+a {
+  @apply text-accent hover:underline;
+}
+
+.card {
+  @apply bg-card rounded-2xl p-6 shadow-soft;
+}
