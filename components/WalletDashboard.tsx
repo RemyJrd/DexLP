@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAccount, useChainId, useSwitchNetwork } from "wagmi";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { gnosis } from "../lib/chains";
 import { useLpPosition } from "../hooks/useLpPosition";
 import { useNavSeries } from "../hooks/useNavSeries";
@@ -17,9 +17,9 @@ export function WalletDashboard({ address }: Props) {
   const normalized = address.toLowerCase();
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchNetwork } = useSwitchNetwork();
+  const { switchChain } = useSwitchChain();
   const position = useLpPosition(normalized);
-  const { series, latest } = useNavSeries(normalized, position.valueUsd);
+  const { series, latest } = useNavSeries(normalized, position.valueUsd, position.rawReserves);
   const startNav = series[0]?.nav ?? position.valueUsd ?? 0;
   const currentNav = latest?.nav ?? position.valueUsd ?? 0;
   const pnl = currentNav - startNav;
@@ -55,7 +55,7 @@ export function WalletDashboard({ address }: Props) {
         </Link>
         {showSwitch && (
           <button
-            onClick={() => switchNetwork?.(gnosis.id)}
+            onClick={() => switchChain?.({ chainId: gnosis.id })}
             className="rounded-2xl border border-accent px-4 py-2 text-xs"
           >
             Switch to Gnosis

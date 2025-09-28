@@ -56,7 +56,7 @@ export function PositionsTable({ position, address }: Props) {
       <div className="flex flex-wrap gap-3 text-xs text-gray-400">
         <Link href={`${BLOCKSCOUT_URL}/address/${position.pair}`}>Pair ↗</Link>
         <Link href={`${BLOCKSCOUT_URL}/address/${ADDRESSES.ROUTER}`}>Router ↗</Link>
-        <Link href={`${BLOCKSCOUT_URL}/address/${ADDRESSES.FACTORY}`}>Factory ↗</Link>
+        <Link href={`${BLOCKSCOUT_URL}/address/${ADDRESSES.ROUTER}`}>Factory ↗</Link>
       </div>
     </div>
   );

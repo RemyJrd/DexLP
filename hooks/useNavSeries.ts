@@ -7,7 +7,11 @@ import { loadNavSeries, saveNavSeries } from "../lib/storage";
 
 const SNAP_INTERVAL = 1000 * 60 * 15;
 
-export function useNavSeries(address?: string | null, nav?: number): {
+export function useNavSeries(
+  address?: string | null,
+  nav?: number,
+  reserves?: { reserveUSDC: bigint; reserveDAI: bigint }
+): {
   series: NavSnapshot[];
   latest?: NavSnapshot;
   ready: boolean;
@@ -33,30 +37,32 @@ export function useNavSeries(address?: string | null, nav?: number): {
   }, [address]);
 
   useEffect(() => {
-    if (!address || !nav || nav <= 0) return;
+    if (!address || !nav || nav <= 0 || !reserves) return;
     if (!series.length && ready) {
-      const price = getPriceRatio();
+      const price = getPriceRatio(reserves.reserveUSDC, reserves.reserveDAI);
       baseRef.current = { a0: nav / 2, b0: nav / 2 };
-      const snapshot = createSnapshot({ nav, price }, baseRef.current ?? undefined);
+      const snapshot = createSnapshot([], nav, price);
       setSeries([snapshot]);
       saveNavSeries(address, [snapshot]);
     }
-  }, [address, nav, series.length, ready]);
+  }, [address, nav, series.length, ready, reserves]);
 
   useEffect(() => {
-    if (!address || !nav || nav <= 0 || !baseRef.current) {
+    if (!address || !nav || nav <= 0 || !baseRef.current || !reserves) {
       return;
     }
 
+    const currentReserves = reserves;
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
     intervalRef.current = setInterval(() => {
-      const price = getPriceRatio();
+      const price = getPriceRatio(currentReserves.reserveUSDC, currentReserves.reserveDAI);
       setSeries((prev) => {
         const previous = prev.at(-1);
-        const snapshot = createSnapshot({ nav, price }, baseRef.current ?? undefined, previous);
+        const base = baseRef.current ?? undefined;
+        const snapshot = createSnapshot(prev, nav, price);
         const updated = [...prev, snapshot].slice(-288);
         saveNavSeries(address, updated);
         return updated;
@@ -68,7 +74,7 @@ export function useNavSeries(address?: string | null, nav?: number): {
         clearInterval(intervalRef.current);
       }
     };
-  }, [address, nav]);
+  }, [address, nav, reserves]);
 
   const latest = series.at(-1);
 

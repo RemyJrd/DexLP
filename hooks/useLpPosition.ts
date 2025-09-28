@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePublicClient } from "wagmi";
 import { formatUnits, getAddress } from "viem";
-import factoryAbi from "../lib/abis/uniswapV2Factory.json" assert { type: "json" };
-import pairAbi from "../lib/abis/uniswapV2Pair.json" assert { type: "json" };
+import { uniswapV2FactoryAbi, uniswapV2PairAbi } from "../lib/abis";
 import { ADDRESSES, BLOCKSCOUT_URL } from "../lib/addresses";
 import { gnosis } from "../lib/chains";
 
@@ -49,15 +48,16 @@ export function useLpPosition(address?: string | null): LpPositionResult {
     let cancelled = false;
 
     async function load() {
+      if (!publicClient) return;
       try {
         setState((prev) => ({ ...prev, loading: true, error: undefined }));
 
         const pairAddress = await publicClient.readContract({
-          address: getAddress(ADDRESSES.FACTORY),
-          abi: factoryAbi as const,
+          address: getAddress(ADDRESSES.ROUTER),
+          abi: uniswapV2FactoryAbi,
           functionName: "getPair",
           args: [getAddress(ADDRESSES.USDC), getAddress(ADDRESSES.DAI)],
-        });
+        }) as `0x${string}`;
 
         if (!pairAddress || pairAddress === "0x0000000000000000000000000000000000000000") {
           if (!cancelled) {
@@ -69,28 +69,28 @@ export function useLpPosition(address?: string | null): LpPositionResult {
           return;
         }
 
-        const [token0, token1] = await Promise.all([
-          publicClient.readContract({ address: pairAddress, abi: pairAbi as const, functionName: "token0" }),
-          publicClient.readContract({ address: pairAddress, abi: pairAbi as const, functionName: "token1" }),
-        ]);
+        const [token0, token1] = (await Promise.all([
+          publicClient.readContract({ address: pairAddress, abi: uniswapV2PairAbi, functionName: "token0" }),
+          publicClient.readContract({ address: pairAddress, abi: uniswapV2PairAbi, functionName: "token1" }),
+        ])) as [`0x${string}`, `0x${string}`];
 
-        const { reserve0, reserve1 } = await publicClient.readContract({
+        const { reserve0, reserve1 } = (await publicClient.readContract({
           address: pairAddress,
-          abi: pairAbi as const,
+          abi: uniswapV2PairAbi,
           functionName: "getReserves",
-        }) as { reserve0: bigint; reserve1: bigint; blockTimestampLast: number };
+        })) as { reserve0: bigint; reserve1: bigint; blockTimestampLast: number };
 
         const [totalSupply, lpBalance] = await Promise.all([
           publicClient.readContract({
             address: pairAddress,
-            abi: pairAbi as const,
+            abi: uniswapV2PairAbi,
             functionName: "totalSupply",
           }) as Promise<bigint>,
           publicClient.readContract({
             address: pairAddress,
-            abi: pairAbi as const,
+            abi: uniswapV2PairAbi,
             functionName: "balanceOf",
-            args: [getAddress(address)],
+            args: [getAddress(address!)],
           }) as Promise<bigint>,
         ]);
 

@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient, useConnectorClient } from "wagmi";
 import { getAddress } from "viem";
-import erc20Abi from "../lib/abis/erc20.json" assert { type: "json" };
-import { gnosis } from "../lib/chains";
+import { erc20Abi } from "../lib/abis";
+import { gnosis, wagmiConfig } from "../lib/chains";
+import { writeContract } from "wagmi/actions";
 
 export function useApprovals(spender: string) {
   const { address } = useAccount();
   const publicClient = usePublicClient({ chainId: gnosis.id });
-  const { data: walletClient } = useWalletClient({ chainId: gnosis.id });
+  const { data: walletClient } = useConnectorClient({ chainId: gnosis.id });
   const [allowances, setAllowances] = useState<Record<string, bigint>>({});
 
   const refreshAllowance = useCallback(
@@ -17,7 +18,7 @@ export function useApprovals(spender: string) {
       if (!address || !publicClient) return 0n;
       const value = (await publicClient.readContract({
         address: getAddress(token),
-        abi: erc20Abi as const,
+        abi: erc20Abi,
         functionName: "allowance",
         args: [getAddress(address), getAddress(spender)],
       })) as bigint;
@@ -33,12 +34,11 @@ export function useApprovals(spender: string) {
       if (!address) throw new Error("Wallet not connected");
       const current = allowances[token.toLowerCase()] ?? (await refreshAllowance(token));
       if (current >= amount) return current;
-      const hash = await walletClient.writeContract({
+      const hash = await writeContract(wagmiConfig, {
         address: getAddress(token),
-        abi: erc20Abi as const,
+        abi: erc20Abi,
         functionName: "approve",
         args: [getAddress(spender), amount],
-        account: getAddress(address),
       });
       await publicClient?.waitForTransactionReceipt({ hash });
       return refreshAllowance(token);

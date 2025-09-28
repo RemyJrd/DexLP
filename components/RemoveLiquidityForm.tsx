@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useAccount, useChainId, usePublicClient, useSwitchNetwork, useWalletClient } from "wagmi";
-import routerAbi from "../lib/abis/uniswapV2Router.json" assert { type: "json" };
+import { useAccount, useChainId, usePublicClient, useSwitchChain } from "wagmi";
+import { writeContract } from "wagmi/actions";
+import { uniswapV2RouterAbi } from "../lib/abis";
 import { ADDRESSES } from "../lib/addresses";
-import { gnosis } from "../lib/chains";
+import { gnosis, wagmiConfig } from "../lib/chains";
 import { useApprovals } from "../hooks/useApprovals";
 import { addFill } from "../lib/storage";
 
@@ -26,8 +27,7 @@ interface Props {
 export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, rawReserves, onSettled }: Props) {
   const { address, status } = useAccount();
   const chainId = useChainId();
-  const { switchNetwork } = useSwitchNetwork();
-  const { data: walletClient } = useWalletClient({ chainId: gnosis.id });
+  const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: gnosis.id });
   const { ensureApproval } = useApprovals(ADDRESSES.ROUTER);
 
@@ -55,7 +55,7 @@ export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, ra
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!address || !walletClient || !publicClient || !pair || liquidity === 0n || !totalSupply || !rawReserves)
+    if (!address || !publicClient || !pair || liquidity === 0n || !totalSupply || !rawReserves)
       return;
     try {
       setSubmitting(true);
@@ -71,9 +71,9 @@ export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, ra
       const amountBMin = (expectedDaiRaw * (denominator - slippageBps)) / denominator;
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20);
 
-      const hash = await walletClient.writeContract({
+      const hash = await writeContract(wagmiConfig, {
         address: ADDRESSES.ROUTER as `0x${string}`,
-        abi: routerAbi as const,
+        abi: uniswapV2RouterAbi,
         functionName: "removeLiquidity",
         args: [
           ADDRESSES.USDC,
@@ -84,7 +84,6 @@ export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, ra
           address,
           deadline,
         ],
-        account: address,
       });
 
       await publicClient.waitForTransactionReceipt({ hash });
@@ -92,7 +91,8 @@ export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, ra
       if (address) {
         addFill(address, {
           type: "remove",
-          pct: percentage,
+          usdc: preview?.usdc.toString() ?? "0",
+          dai: preview?.dai.toString() ?? "0",
           tx: hash,
         });
       }
@@ -113,7 +113,7 @@ export function RemoveLiquidityForm({ pair, lpBalance, totalSupply, reserves, ra
           <button
             type="button"
             className="rounded-2xl border border-accent px-3 py-2 text-xs"
-            onClick={() => switchNetwork?.(gnosis.id)}
+            onClick={() => switchChain?.({ chainId: gnosis.id })}
           >
             Switch to Gnosis
           </button>

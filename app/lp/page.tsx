@@ -1,5 +1,7 @@
 import { LpManager } from "../../components/LpManager";
 
+export const dynamic = 'force-dynamic';
+
 export default function LpPage() {
   return (
     <main className="space-y-6">
