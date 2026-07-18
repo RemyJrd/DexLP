@@ -1,13 +1,5 @@
-import { WalletDashboard } from "../../../components/WalletDashboard";
+import { redirect } from "next/navigation";
 
-export const dynamic = 'force-dynamic';
-
-interface Params {
-  params: {
-    addr: string;
-  };
-}
-
-export default function WalletPage({ params }: Params) {
-  return <WalletDashboard address={params.addr} />;
+export default function WalletPage() {
+  redirect("/");
 }

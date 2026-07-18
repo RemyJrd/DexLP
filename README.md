@@ -1,206 +1,183 @@
-# DexLP - Liquidity Provisioning Dashboard for Gnosis Chain
+# DexLP
 
-A comprehensive dashboard for managing SushiSwap USDC/DAI liquidity positions on Gnosis Chain. Monitor your LP positions, track impermanent loss, and manage liquidity with ease.
+Tableau de bord public, en lecture seule, de la liquidité SushiSwap sur
+Gnosis Chain.
 
-## Project Goal
+Le MVP affiche l’état courant de la pool SushiSwap V2 **USDC/WXDAI** :
 
-DexLP simplifies liquidity provisioning on Gnosis Chain by providing:
+- liquidité totale estimée ;
+- réserves on-chain et composition de la pool ;
+- prix interne USDC/WXDAI et écart au peg ;
+- supply du jeton LP ;
+- nombre de détenteurs LP ;
+- top 10 des détenteurs, leur part du supply et leur sous-jacent estimé ;
+- bloc, horodatage et sources de chaque lecture.
 
-- **Real-time Position Monitoring**: Track your LP positions with live NAV (Net Asset Value) calculations
-- **Impermanent Loss Analysis**: Monitor and visualize impermanent loss over time
-- **Easy Liquidity Management**: Add or remove liquidity with a user-friendly interface
-- **Multi-wallet Support**: Track multiple wallet addresses in your watchlist
-- **Local Data Storage**: All snapshots and data stored locally in your browser
+Aucune connexion de wallet n’est nécessaire et l’application ne signe aucune
+transaction.
 
-##  Features
+## Pourquoi USDC/WXDAI ?
 
-### Core Functionality
-- **Position Tracking**: Monitor USDC/DAI LP positions on Gnosis
-- **NAV Calculations**: Real-time Net Asset Value tracking
-- **Impermanent Loss Monitoring**: Track IL with automated snapshots every 15 minutes
-- **Liquidity Management**: Add/remove liquidity directly from the interface
-- **Wallet Integration**: Connect via MetaMask or WalletConnect
+L’ancien README annonçait une pool SushiSwap USDC/DAI, mais l’audit on-chain a
+mis en évidence trois problèmes :
 
-### Technical Features
-- **Next.js 14**: Modern React framework with App Router
-- **Wagmi + Viem**: Ethereum interaction library
-- **Web3Modal**: Wallet connection management
-- **Zustand**: State management
-- **Tailwind CSS**: Modern styling
-- **TypeScript**: Type-safe development
+1. l’adresse USDC documentée était erronée ;
+2. l’adresse DAI documentée n’était pas celle du contrat DAI Gnosis ;
+3. aucune pool SushiSwap USDC/DAI directe n’existe actuellement en V2 ou V3.
 
-##  Installation & Setup
+La pool réellement active et pertinente pour ce premier dashboard est :
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- MetaMask or compatible wallet
+| Élément | Adresse |
+| --- | --- |
+| Pool Sushi V2 USDC/WXDAI | `0xA227c72a4055A9DC949cAE24f54535fe890d3663` |
+| USDC | `0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83` |
+| WXDAI | `0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d` |
+| Sushi V2 Factory | `0xC35DAdb65012eC5796536bD9864eD8773aBc74C4` |
 
-### Quick Start
+## Sources de données
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd DexLP
-   ```
+### Gnosis RPC
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+Les réserves, `token0`, `token1`, le supply LP et le bloc courant sont lus
+directement sur Gnosis Chain avec `viem`.
 
-3. **Set up environment variables**
-   ```bash
-   # Create .env.local file
-   echo "NEXT_PUBLIC_PROJECT_ID=your_walletconnect_project_id" > .env.local
-   ```
-   
-   > **Note**: Get your WalletConnect Project ID from [cloud.walletconnect.com](https://cloud.walletconnect.com/)
+- source principale : `https://rpc.gnosischain.com`
+- fallback : `https://rpc.gnosis.gateway.fm`
 
-4. **Start development server**
-   ```bash
-   npm run dev
-   ```
+Le RPC public Gnosis est gratuit mais sans SLA. Une erreur RPC produit un état
+d’erreur explicite : aucune donnée fictive n’est injectée dans l’interface.
 
-5. **Open your browser**
-   Navigate to `http://localhost:3000`
+### Blockscout
 
-## Usage Guide
+Le top des détenteurs LP et le nombre total de holders proviennent de :
 
-### Getting Started
+```text
+GET https://gnosis.blockscout.com/api/v2/tokens/{PAIR_ADDRESS}/holders
+GET https://gnosis.blockscout.com/api/v2/tokens/{PAIR_ADDRESS}
+```
 
-1. **Connect Your Wallet**
-   - Click the "Connect Wallet" button
-   - Choose MetaMask or WalletConnect
-   - Approve the connection
+La réponse est adaptée côté serveur et mise en cache pendant cinq minutes afin
+de limiter la pression sur l’API publique. Si Blockscout est indisponible, les
+réserves RPC restent visibles et seule la section holders passe en mode
+dégradé.
 
-2. **Add Wallet Addresses**
-   - Enter any wallet address in the input field
-   - Click "Add" to add it to your watchlist
-   - Or use "Use connected wallet" for your current wallet
+Un holder direct peut être un Safe, un farm ou un coffre qui agrège plusieurs
+bénéficiaires économiques. Le tableau ne prétend donc pas identifier les
+propriétaires finaux.
 
-3. **Monitor LP Positions**
-   - Navigate to `/wallet/[address]` to view detailed position data
-   - See real-time NAV, impermanent loss, and reserves
-   - View historical snapshots and charts
+## Hypothèses de calcul
 
-### Managing Liquidity
+- `TVL estimée = réserve USDC + réserve WXDAI`
+- `1 USDC = 1 USD`
+- `1 WXDAI = 1 USD`
+- `prix pool = réserve WXDAI / réserve USDC`
+- `part LP = solde LP / totalSupply`
+- `sous-jacent holder = réserve × part LP`
 
-1. **Add Liquidity**
-   - Go to `/lp` page
-   - Enter USDC and DAI amounts
-   - Approve tokens if needed
-   - Confirm the transaction
+La TVL est volontairement qualifiée d’**estimée**. L’écart au peg décrit le
+ratio interne de la pool, pas un prix oracle.
 
-2. **Remove Liquidity**
-   - Select the percentage to remove
-   - Choose minimum amounts to receive
-   - Confirm the transaction
+## Installation
 
-### Understanding the Data
+Prérequis :
 
-- **NAV (Net Asset Value)**: Current value of your LP position
-- **Impermanent Loss**: Loss due to price divergence between tokens
-- **Reserves**: Current USDC and DAI amounts in the pool
-- **Share Percentage**: Your share of the total liquidity pool
-
-## 🔧 Configuration
-
-### Environment Variables
+- Node.js 20.9 ou plus récent ;
+- pnpm 11 recommandé.
 
 ```bash
-# Required for WalletConnect functionality
-NEXT_PUBLIC_PROJECT_ID=your_walletconnect_project_id
+pnpm install
+pnpm dev
 ```
 
-### Supported Networks
+Puis ouvrir [http://localhost:3000](http://localhost:3000).
 
-- **Gnosis Chain (Chain ID: 100)**
-  - Native currency: xDAI
-  - RPC: https://rpc.gnosischain.com
-  - Explorer: https://gnosisscan.io
-
-### Contract Addresses
-
-The application uses these SushiSwap contracts on Gnosis:
-
-- **Router**: `0x1b02da8cb0d097eb8d57a175b88c7d8b47997506`
-- **Factory**: `0xc35dadb65012ec5796536bd9864ed8773abc74c4`
-- **USDC**: `0xddafbb505ad214d7b80b1f830fcc89b6063be975`
-- **DAI**: `0x44fA8E6f47987339850626F86470146305009c8B`
-
-## Data Storage
-
-All data is stored locally in your browser:
-
-- **LP Snapshots**: Stored every 15 minutes automatically
-- **Watchlist**: Saved wallet addresses
-- **Transaction History**: Local fill tracking
-
-## 🚨 Important Notes
-
-### Security
-- **Local Storage**: Data is stored locally - clear browser data to reset
-
-### Limitations
-- **Gnosis Chain Only**: Currently supports Gnosis Chain
-- **USDC/DAI Pair**: Limited to USDC/DAI liquidity pair
-- **Browser Storage**: Data is not synced across devices
-
-## 🛠️ Development
-
-### Available Scripts
+L’application fonctionne sans fichier `.env`. Pour remplacer les endpoints
+publics :
 
 ```bash
-# Development
-npm run dev          # Start development server
-
-# Production
-npm run build        # Build for production
-npm run start        # Start production server
-
-# Code Quality
-npm run lint         # Run ESLint
+cp .env.example .env.local
 ```
 
-### Project Structure
+Variables disponibles :
 
-```
-DexLP/
-├── app/                 # Next.js App Router pages
-├── components/          # React components
-├── hooks/              # Custom React hooks
-├── lib/                # Utilities and configurations
-├── providers/          # React context providers
-└── store/              # Zustand state management
+```bash
+GNOSIS_RPC_URL=https://rpc.gnosischain.com
+GNOSIS_RPC_FALLBACK_URL=https://rpc.gnosis.gateway.fm
+BLOCKSCOUT_API_URL=https://gnosis.blockscout.com/api/v2
 ```
 
-## Contributing
+## Commandes
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+```bash
+pnpm dev        # serveur de développement
+pnpm lint       # ESLint
+pnpm typecheck  # TypeScript strict
+pnpm test       # tests unitaires Vitest
+pnpm build      # build de production Next.js
+pnpm start      # serveur de production après build
+pnpm check      # lint + types + tests + build
+```
 
-## License
+## Architecture
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```text
+app/
+├── (home)/page.tsx      # page principale
+├── api/pool/route.ts    # endpoint agrégé RPC + Blockscout
+├── globals.css          # design system et responsive
+└── layout.tsx
+components/
+├── Icons.tsx
+└── PoolDashboard.tsx    # chargement, refresh et vues du dashboard
+lib/
+├── abis.ts
+├── pool-config.ts       # adresses et configuration
+├── pool-data.ts         # adaptateurs RPC / Blockscout
+├── pool-math.ts         # calculs purs bigint-safe
+├── pool-math.test.ts
+└── pool-types.ts
+```
 
-## Support
+Le navigateur interroge `/api/pool` toutes les 30 secondes. La route serveur :
 
-If you encounter any issues:
+1. lit les données de la paire au RPC ;
+2. normalise l’ordre `token0/token1` ;
+3. récupère ou réutilise le cache Blockscout ;
+4. calcule TVL, poids, peg, concentration et sous-jacents ;
+5. sérialise les `bigint` en chaînes lorsque leur valeur brute est conservée.
 
-1. Check the browser console for errors
-2. Ensure you're connected to Gnosis Chain
-3. Verify your wallet has sufficient xDAI for gas fees
-4. Check that the environment variables are set correctly
+## État de l’ancien prototype
 
-## Useful Links
+L’audit initial a trouvé un squelette Next.js qui ne compilait pas :
 
-- [Gnosis Chain Documentation](https://docs.gnosischain.com/)
-- [SushiSwap on Gnosis](https://gnosis.sushi.com/)
-- [WalletConnect Documentation](https://docs.walletconnect.com/)
-- [Wagmi Documentation](https://wagmi.sh/)
+- le dossier `lib/` entier était absent, car `.gitignore` ignorait `lib/` ;
+- `getPair` était appelé sur le routeur au lieu de la factory ;
+- les adresses et libellés USDC/DAI étaient incohérents ;
+- WalletConnect était obligatoire même pour une vue en lecture seule ;
+- l’historique NAV/IL répétait des valeurs sans nouvelle lecture RPC ;
+- les formulaires add/remove n’étaient pas suffisamment fiables pour être
+  exposés sans tests sur fork.
 
----
+Ces surfaces d’écriture ont été retirées du MVP. Les routes historiques
+`/wallet/[addr]` et `/lp` redirigent vers le dashboard.
+
+## Limites et suite possible
+
+Ce MVP est un **snapshot courant**, pas encore un produit d’analytics
+historique. Les prochaines itérations naturelles sont :
+
+1. historique TVL, volume et frais via le subgraph Sushi / The Graph ;
+2. prix externes et détection de depeg via un oracle ou une API de prix ;
+3. distinction plus fine entre détenteur LP direct et bénéficiaire final ;
+4. sélection de plusieurs pools Gnosis ;
+5. alertes de seuil et suivi de snapshots persistés ;
+6. réintroduction éventuelle de la gestion de liquidité après tests sur fork,
+   simulations et sécurisation des quotes/slippages.
+
+## Références
+
+- [Documentation Gnosis RPC](https://docs.gnosischain.com/tools/RPC%20Providers/)
+- [Documentation Blockscout — token holders](https://docs.blockscout.com/api-reference/get-token-holders)
+- [Pool sur Blockscout](https://gnosis.blockscout.com/address/0xA227c72a4055A9DC949cAE24f54535fe890d3663)
+- [Pool sur Sushi](https://www.sushi.com/gnosis/pool/v2/0xA227c72a4055A9DC949cAE24f54535fe890d3663)
+
