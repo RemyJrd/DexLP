@@ -1,5 +1,5 @@
-import { PoolDashboard } from "../../components/PoolDashboard";
+import { PoolExplorer } from "../../components/PoolExplorer";
 
 export default function HomePage() {
-  return <PoolDashboard />;
+  return <PoolExplorer />;
 }

@@ -56,6 +56,10 @@ a:focus-visible {
 }
 
 @layer components {
+  .skip-link {
+    @apply fixed left-4 top-3 z-[100] -translate-y-20 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-background transition focus:translate-y-0;
+  }
+
   .app-shell {
     @apply min-h-screen;
   }
@@ -96,6 +100,10 @@ a:focus-visible {
     @apply inline-flex h-9 items-center gap-2 rounded-xl px-2 text-xs text-ink-muted no-underline transition hover:bg-white/[0.04] hover:text-white sm:px-3;
   }
 
+  .topbar-link-active {
+    @apply bg-white/[0.045] text-white;
+  }
+
   .panel {
     @apply rounded-[22px] border border-white/[0.07] bg-panel/80 shadow-panel backdrop-blur;
   }
@@ -121,6 +129,126 @@ a:focus-visible {
       linear-gradient(90deg, rgba(119, 230, 190, 0.8) 1px, transparent 1px);
     background-size: 32px 32px;
     mask-image: linear-gradient(to left, black, transparent);
+  }
+
+  .catalog-hero {
+    @apply panel flex flex-col gap-8 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(119, 230, 190, 0.09), transparent 22rem),
+      linear-gradient(120deg, rgba(14, 31, 26, 0.98), rgba(10, 23, 19, 0.98));
+  }
+
+  .catalog-kpis {
+    @apply grid shrink-0 grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-black/10;
+  }
+
+  .catalog-kpis > div {
+    @apply min-w-24 border-r border-white/[0.06] px-4 py-4 text-center last:border-r-0 sm:min-w-28;
+  }
+
+  .catalog-kpis dt {
+    @apply text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-muted;
+  }
+
+  .catalog-kpis dd {
+    @apply mt-2 text-xl font-semibold tabular-nums text-white;
+  }
+
+  .catalog-filters {
+    @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-6;
+  }
+
+  .catalog-field {
+    @apply flex min-w-0 flex-col gap-2;
+  }
+
+  .catalog-search-field {
+    @apply sm:col-span-2 lg:col-span-2;
+  }
+
+  .catalog-label {
+    @apply text-[9px] font-semibold uppercase tracking-[0.13em] text-ink-muted;
+  }
+
+  .catalog-input,
+  .catalog-select {
+    @apply h-11 min-w-0 w-full rounded-xl border border-white/[0.08] bg-black/15 px-3 text-sm text-white outline-none transition placeholder:text-ink-faint hover:border-white/[0.14] focus:border-accent/50 focus:ring-2 focus:ring-accent/10;
+  }
+
+  .catalog-select {
+    @apply cursor-pointer pr-8;
+    color-scheme: dark;
+  }
+
+  .pool-token-mark {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-panel font-mono text-[9px] font-semibold uppercase shadow-lg;
+  }
+
+  .pool-token-mark-1 {
+    @apply bg-accent text-background;
+  }
+
+  .pool-token-mark-2 {
+    @apply bg-[#8ea7ff] text-background;
+  }
+
+  .pool-token-mark-3 {
+    @apply bg-[#d7b879] text-background;
+  }
+
+  .featured-pill,
+  .risk-pill,
+  .coverage-pill {
+    @apply inline-flex w-fit items-center rounded-full border px-2 py-1 text-[9px] font-medium;
+  }
+
+  .featured-pill {
+    @apply border-accent/20 bg-accent/[0.08] text-accent;
+  }
+
+  .risk-pill {
+    @apply border-white/[0.07] bg-white/[0.035] text-ink-muted;
+  }
+
+  .coverage-pill-detailed {
+    @apply border-accent/20 bg-accent/[0.08] text-accent;
+  }
+
+  .coverage-pill-summary {
+    @apply border-[#8ea7ff]/20 bg-[#8ea7ff]/[0.08] text-[#b7c4ff];
+  }
+
+  .chain-label {
+    @apply inline-flex items-center gap-2 whitespace-nowrap text-xs text-white;
+  }
+
+  .chain-mark {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-[10px] font-semibold text-accent;
+  }
+
+  .catalog-table {
+    @apply w-full border-collapse text-left;
+  }
+
+  .catalog-table th {
+    @apply whitespace-nowrap bg-black/10 px-4 py-3 text-[9px] font-semibold uppercase tracking-[0.11em] text-ink-faint first:pl-6 last:pr-6;
+  }
+
+  .catalog-table td {
+    @apply border-t border-white/[0.055] px-4 py-4 align-middle first:pl-6 last:pr-6;
+  }
+
+  .catalog-table tbody tr {
+    @apply transition hover:bg-white/[0.018];
+  }
+
+  .catalog-table tbody tr:first-child {
+    background:
+      linear-gradient(90deg, rgba(119, 230, 190, 0.045), transparent 58%);
+  }
+
+  .catalog-pool-card {
+    @apply min-w-0 rounded-2xl border border-white/[0.07] bg-black/10 p-4;
   }
 
   .eyebrow {
@@ -373,4 +501,3 @@ a:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
-

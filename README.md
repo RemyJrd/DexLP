@@ -1,31 +1,49 @@
 # DexLP
 
-Tableau de bord public, en lecture seule, de la liquidité SushiSwap sur
-Gnosis Chain.
+Explorateur public, multi-chain et en lecture seule des principales pools de
+liquidité EVM.
 
-Le MVP affiche l’état courant de la pool SushiSwap V2 **USDC/WXDAI** :
+DexLP réunit deux niveaux d’analyse :
 
-- liquidité totale estimée ;
-- réserves on-chain et composition de la pool ;
-- prix interne USDC/WXDAI et écart au peg ;
-- supply du jeton LP ;
-- nombre de détenteurs LP ;
-- top 10 des détenteurs, leur part du supply et leur sous-jacent estimé ;
-- bloc, horodatage et sources de chaque lecture.
+- un **catalogue comparable** de pools issues de plusieurs DEX et réseaux ;
+- une **analyse on-chain complète** de la pool pilote SushiSwap V2
+  USDC/WXDAI sur Gnosis.
 
 Aucune connexion de wallet n’est nécessaire et l’application ne signe aucune
 transaction.
 
-## Pourquoi USDC/WXDAI ?
+## Fonctionnalités
 
-L’ancien README annonçait une pool SushiSwap USDC/DAI, mais l’audit on-chain a
-mis en évidence trois problèmes :
+### Catalogue multi-chain
 
-1. l’adresse USDC documentée était erronée ;
-2. l’adresse DAI documentée n’était pas celle du contrat DAI Gnosis ;
-3. aucune pool SushiSwap USDC/DAI directe n’existe actuellement en V2 ou V3.
+La page d’accueil affiche des pools provenant de :
 
-La pool réellement active et pertinente pour ce premier dashboard est :
+- Gnosis ;
+- Ethereum ;
+- Arbitrum ;
+- Base ;
+- Polygon ;
+- Optimism (`OP Mainnet` dans la source).
+
+Les DEX couverts incluent notamment Uniswap V2/V3/V4, SushiSwap, Curve,
+Balancer, Aerodrome, PancakeSwap, QuickSwap, Camelot et Fluid.
+
+L’interface propose :
+
+- recherche par token, paire, protocole, identifiant ou adresse ;
+- filtres par réseau, protocole et profil stable/volatile ;
+- tri par TVL, volume 24 h, APY publié ou nom ;
+- TVL et volumes 24 h / 7 jours ;
+- APY total, APY de base, APY des rewards et variation sur sept jours ;
+- fiches synthétiques dédiées pour chaque pool ;
+- interface responsive sans scroll horizontal sur mobile.
+
+Les filtres sont reflétés dans l’URL afin de pouvoir partager une sélection.
+
+### Analyse complète Gnosis
+
+La route
+`/pools/gnosis/sushi-v2/usdc-wxdai` conserve l’analyse détaillée de la pool :
 
 | Élément | Adresse |
 | --- | --- |
@@ -34,48 +52,95 @@ La pool réellement active et pertinente pour ce premier dashboard est :
 | WXDAI | `0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d` |
 | Sushi V2 Factory | `0xC35DAdb65012eC5796536bD9864eD8773aBc74C4` |
 
+Elle affiche :
+
+- réserves et supply LP directement depuis le RPC Gnosis ;
+- TVL stablecoins estimée et composition ;
+- prix interne USDC/WXDAI et écart au peg ;
+- nombre de détenteurs LP ;
+- top 10 des détenteurs et leur part du supply ;
+- sous-jacent estimé de chaque détenteur ;
+- bloc, horodatage et source de chaque lecture.
+
+Cette pool est injectée séparément dans le catalogue, car DefiLlama Yields ne
+la référence pas actuellement. Son APY reste donc indiqué comme indisponible :
+aucun rendement n’est inventé.
+
 ## Sources de données
+
+### DefiLlama Yields
+
+Le catalogue utilise côté serveur :
+
+```text
+GET https://yields.llama.fi/pools
+```
+
+Le flux est volumineux et ne doit jamais être téléchargé directement par chaque
+navigateur. DexLP le met en cache pendant une heure, le normalise, puis renvoie
+au client au maximum 40 pools par réseau.
+
+Règles d’éligibilité :
+
+- réseau et DEX dans les listes supportées ;
+- exposition multi-actifs ;
+- au moins deux tokens sous-jacents publiés ;
+- TVL supérieure ou égale à 10 000 USD ;
+- exclusion des valeurs signalées comme outliers par la source ;
+- classement par TVL au sein de chaque réseau.
+
+Les valeurs sont celles publiées par DefiLlama :
+
+- `apyBase` : rendement de base, généralement les frais pour un DEX ;
+- `apyReward` : incentives en tokens ;
+- `apy` : rendement total publié ;
+- `apyPct7D` : variation absolue de l’APY en points de pourcentage.
+
+Ces valeurs ne sont pas renommées en APR. Elles peuvent être nulles et
+n’intègrent pas automatiquement l’impermanent loss, le gas, le slippage ou la
+fiscalité.
+
+Le service public DefiLlama ne fournit pas de SLA. Si celui-ci est indisponible,
+le catalogue passe en mode dégradé et la pool pilote Gnosis reste accessible.
 
 ### Gnosis RPC
 
-Les réserves, `token0`, `token1`, le supply LP et le bloc courant sont lus
-directement sur Gnosis Chain avec `viem`.
+Les réserves, `token0`, `token1`, le supply LP et le bloc courant sont lus avec
+`viem`.
 
 - source principale : `https://rpc.gnosischain.com`
 - fallback : `https://rpc.gnosis.gateway.fm`
 
-Le RPC public Gnosis est gratuit mais sans SLA. Une erreur RPC produit un état
-d’erreur explicite : aucune donnée fictive n’est injectée dans l’interface.
-
 ### Blockscout
 
-Le top des détenteurs LP et le nombre total de holders proviennent de :
+Les détenteurs LP proviennent de :
 
 ```text
 GET https://gnosis.blockscout.com/api/v2/tokens/{PAIR_ADDRESS}/holders
 GET https://gnosis.blockscout.com/api/v2/tokens/{PAIR_ADDRESS}
 ```
 
-La réponse est adaptée côté serveur et mise en cache pendant cinq minutes afin
-de limiter la pression sur l’API publique. Si Blockscout est indisponible, les
-réserves RPC restent visibles et seule la section holders passe en mode
-dégradé.
+Les réponses sont adaptées côté serveur et mises en cache cinq minutes. Un
+holder direct peut être un Safe, un farm ou un coffre qui agrège plusieurs
+bénéficiaires économiques.
 
-Un holder direct peut être un Safe, un farm ou un coffre qui agrège plusieurs
-bénéficiaires économiques. Le tableau ne prétend donc pas identifier les
-propriétaires finaux.
+## Routes
 
-## Hypothèses de calcul
+| Route | Description |
+| --- | --- |
+| `/` | Explorateur multi-chain filtrable |
+| `/pools/[poolId]` | Fiche synthétique d’une pool DefiLlama |
+| `/pools/gnosis/sushi-v2/usdc-wxdai` | Analyse on-chain complète Gnosis |
+| `/api/pools` | Catalogue multi-chain normalisé |
+| `/api/pool` | Snapshot on-chain de la pool pilote |
 
-- `TVL estimée = réserve USDC + réserve WXDAI`
-- `1 USDC = 1 USD`
-- `1 WXDAI = 1 USD`
-- `prix pool = réserve WXDAI / réserve USDC`
-- `part LP = solde LP / totalSupply`
-- `sous-jacent holder = réserve × part LP`
+Filtres serveur disponibles sur `/api/pools` :
 
-La TVL est volontairement qualifiée d’**estimée**. L’écart au peg décrit le
-ratio interne de la pool, pas un prix oracle.
+```text
+?id={poolId}
+?chain={chain}
+?project={dexSlug}
+```
 
 ## Installation
 
@@ -101,6 +166,7 @@ cp .env.example .env.local
 Variables disponibles :
 
 ```bash
+DEFILLAMA_YIELDS_URL=https://yields.llama.fi/pools
 GNOSIS_RPC_URL=https://rpc.gnosischain.com
 GNOSIS_RPC_FALLBACK_URL=https://rpc.gnosis.gateway.fm
 BLOCKSCOUT_API_URL=https://gnosis.blockscout.com/api/v2
@@ -122,62 +188,64 @@ pnpm check      # lint + types + tests + build
 
 ```text
 app/
-├── (home)/page.tsx      # page principale
-├── api/pool/route.ts    # endpoint agrégé RPC + Blockscout
-├── globals.css          # design system et responsive
+├── (home)/page.tsx
+├── api/
+│   ├── pool/route.ts
+│   └── pools/route.ts
+├── pools/
+│   ├── [poolId]/page.tsx
+│   └── gnosis/sushi-v2/usdc-wxdai/page.tsx
+├── globals.css
 └── layout.tsx
 components/
 ├── Icons.tsx
-└── PoolDashboard.tsx    # chargement, refresh et vues du dashboard
+├── PoolDashboard.tsx
+└── PoolExplorer.tsx
 lib/
 ├── abis.ts
-├── pool-config.ts       # adresses et configuration
-├── pool-data.ts         # adaptateurs RPC / Blockscout
-├── pool-math.ts         # calculs purs bigint-safe
+├── catalog-data.ts
+├── catalog-normalize.ts
+├── catalog-normalize.test.ts
+├── catalog-types.ts
+├── pool-config.ts
+├── pool-data.ts
+├── pool-math.ts
 ├── pool-math.test.ts
 └── pool-types.ts
 ```
 
-Le navigateur interroge `/api/pool` toutes les 30 secondes. La route serveur :
+## Tests et garanties
 
-1. lit les données de la paire au RPC ;
-2. normalise l’ordre `token0/token1` ;
-3. récupère ou réutilise le cache Blockscout ;
-4. calcule TVL, poids, peg, concentration et sous-jacents ;
-5. sérialise les `bigint` en chaînes lorsque leur valeur brute est conservée.
+La suite couvre notamment :
 
-## État de l’ancien prototype
+- conversion bigint-safe des réserves et parts LP ;
+- normalisation des valeurs nulles ;
+- rejet des chaînes et protocoles non supportés ;
+- exclusion des outliers, pools mono-actif et TVL insuffisantes ;
+- quota par réseau afin de ne pas masquer les plus petites chaînes ;
+- filtres d’identifiant exacts.
 
-L’audit initial a trouvé un squelette Next.js qui ne compilait pas :
+Le navigateur a été validé sur les parcours catalogue, filtres combinés,
+fiches synthétiques et détail Gnosis, avec vérification responsive à 320 px.
 
-- le dossier `lib/` entier était absent, car `.gitignore` ignorait `lib/` ;
-- `getPair` était appelé sur le routeur au lieu de la factory ;
-- les adresses et libellés USDC/DAI étaient incohérents ;
-- WalletConnect était obligatoire même pour une vue en lecture seule ;
-- l’historique NAV/IL répétait des valeurs sans nouvelle lecture RPC ;
-- les formulaires add/remove n’étaient pas suffisamment fiables pour être
-  exposés sans tests sur fork.
+## Limites et prochaines étapes
 
-Ces surfaces d’écriture ont été retirées du MVP. Les routes historiques
-`/wallet/[addr]` et `/lp` redirigent vers le dashboard.
+Cette version fournit des snapshots et des indicateurs agrégés. Les évolutions
+naturelles sont :
 
-## Limites et suite possible
-
-Ce MVP est un **snapshot courant**, pas encore un produit d’analytics
-historique. Les prochaines itérations naturelles sont :
-
-1. historique TVL, volume et frais via le subgraph Sushi / The Graph ;
-2. prix externes et détection de depeg via un oracle ou une API de prix ;
-3. distinction plus fine entre détenteur LP direct et bénéficiaire final ;
-4. sélection de plusieurs pools Gnosis ;
-5. alertes de seuil et suivi de snapshots persistés ;
-6. réintroduction éventuelle de la gestion de liquidité après tests sur fork,
-   simulations et sécurisation des quotes/slippages.
+1. historique TVL/APY/volume avec graphiques 7 et 30 jours ;
+2. persistance d’un dernier snapshot valide et requêtes conditionnelles ETag ;
+3. adaptateurs on-chain détaillés pour d’autres réseaux et protocoles ;
+4. holders LP sur les pools disposant d’un token LP canonique ;
+5. estimation de l’impermanent loss d’une position ;
+6. comparaison côte à côte et watchlist locale ;
+7. vue facultative des positions d’un wallet, toujours séparée du catalogue
+   public.
 
 ## Références
 
+- [Méthodologie DefiLlama Yields](https://github.com/DefiLlama/yield-server#apy-methodology)
+- [Schéma des adaptateurs DefiLlama](https://github.com/DefiLlama/yield-server)
 - [Documentation Gnosis RPC](https://docs.gnosischain.com/tools/RPC%20Providers/)
 - [Documentation Blockscout — token holders](https://docs.blockscout.com/api-reference/get-token-holders)
-- [Pool sur Blockscout](https://gnosis.blockscout.com/address/0xA227c72a4055A9DC949cAE24f54535fe890d3663)
-- [Pool sur Sushi](https://www.sushi.com/gnosis/pool/v2/0xA227c72a4055A9DC949cAE24f54535fe890d3663)
-
+- [Pool pilote sur Blockscout](https://gnosis.blockscout.com/address/0xA227c72a4055A9DC949cAE24f54535fe890d3663)

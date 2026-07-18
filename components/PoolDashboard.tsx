@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   PoolApiError,
@@ -427,9 +428,11 @@ export function PoolDashboard() {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-              <span>Vue d’ensemble</span>
+              <Link href="/" className="transition hover:text-white">
+                Catalogue
+              </Link>
               <span className="text-white/20">/</span>
-              <span className="text-accent">Pools</span>
+              <span className="text-accent">Analyse complète</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="status-pill">
